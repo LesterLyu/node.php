@@ -10,7 +10,7 @@ error_reporting(E_ALL);
 
 set_time_limit(120);
 
-define("ADMIN_MODE", false); //set to true to allow unsafe operations, set back to false when finished
+define("ADMIN_MODE", true); //set to true to allow unsafe operations, set back to false when finished
 
 define("NODE_VER", "v9.1.0");
 
@@ -151,12 +151,49 @@ function node_serve($path = "") {
 	curl_close($curl);
 }
 
+function start_database() {
+	$db_pid = exec("../bin/mongod --dbpath ../data/db >dbout 2>&1 & echo $!");
+	echo $db_pid > 0 ? "Done. PID=$db_pid\n" : "Failed.\n";
+	file_put_contents("dbpid", $db_pid, LOCK_EX);
+	sleep(2); // wait for running db
+	echo file_get_contents("dbout");
+}
+
+function start_309() {
+	$node309_pid = intval(file_get_contents("node309_pid"));
+	if($node309_pid > 0) {
+		echo "309 Node.js is running.\n";
+		echo '<p><a href="http://309.lesterlyu.com/" target="_blank">http://309.lesterlyu.com/</a></p>';
+		return;
+	}
+	
+	$node309_pid = exec("./node/bin/node ../What-To-Eat/bin/www >node309out 2>&1 & echo $!");
+	echo '<p><a href="http://309.lesterlyu.com/" target="_blank">http://309.lesterlyu.com/</a></p>';
+	echo $node309_pid > 0 ? "Done. PID=$node309_pid\n" : 'Failed.\n';
+	file_put_contents("node309_pid", $node309_pid, LOCK_EX);
+	sleep(2); // wait for running npde
+	echo file_get_contents("node309out");
+}
+
+function stop_309() {
+	$node309_pid = intval(file_get_contents("node309_pid"));
+	if($node309_pid === 0) {
+		echo "Node.js is not yet running.\n";
+		return;
+	}
+	echo "Stopping Node.js with PID=$node309_pid:\n";
+	$ret = -1;
+	passthru("kill $node309_pid", $ret);
+	echo $ret === 0 ? "Done.\n" : "Failed. Error: $ret\n";
+	file_put_contents("node309_pid", '', LOCK_EX);
+}
+
 function node_head() {
 	echo '<!DOCTYPE html><html><head><title>Node.php</title><meta charset="utf-8"><body style="font-family:Helvetica,sans-serif;"><h1>Node.php</h1><pre>';
 }
 
 function node_foot() {
-	echo '</pre><p><a href="https://github.com/niutech/node.php" target="_blank">Powered by node.php</a></p></body></html>';
+	echo '</pre><p><a href="https://github.com/lesterlyu/node.php" target="_blank">Powered by node.php</a></p></body></html>';
 }
 
 function node_dispatch() {
@@ -172,6 +209,12 @@ function node_dispatch() {
 			node_stop();
 		} elseif(isset($_GET['npm'])) {
 			node_npm($_GET['npm']);
+		} elseif(isset($_GET['database'])) {
+			start_database();
+		} elseif(isset($_GET['309'])) {
+			start_309();
+		} elseif(isset($_GET['stop309'])) {
+			stop_309();
 		} else {
 			echo "You are in Admin Mode. Switch back to normal mode to serve your node app.";
 		}
