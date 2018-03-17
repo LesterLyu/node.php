@@ -4,6 +4,14 @@ error_reporting(E_ALL);
 
 set_time_limit(120);
 
+function checkProcessExists($name) {
+	$exist = false;
+	exec("ps x | grep What | grep -v grep", $pids);
+	if (count($pids) > 0) {
+        $exists = true;
+    }
+    return $exists;
+}
 
 function start_database() {
 	$db_pid = exec("../bin/mongod --dbpath ../data/db >dbout 2>&1 & echo $!");
@@ -18,9 +26,11 @@ function start_309() {
 
 function node_dispatch() {
 	echo 'redirecting...';
-	$node309_pid = intval(file_get_contents("node309_pid"));
-	if($node309_pid === 0) {
+	
+	if(!checkProcessExists("mongod")) {
 		start_database();
+	}
+	if(!checkProcessExists("What-To-Eat")) {
 		start_309();
 	}
 	header("Location: http://309.lesterlyu.com");

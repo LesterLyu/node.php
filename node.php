@@ -160,8 +160,7 @@ function start_database() {
 }
 
 function start_309() {
-	$node309_pid = intval(file_get_contents("node309_pid"));
-	if($node309_pid > 0) {
+	if(checkProcessExists("What-To-Eat")) {
 		echo "309 Node.js is running.\n";
 		echo '<p><a href="http://309.lesterlyu.com/" target="_blank">http://309.lesterlyu.com/</a></p>';
 		return;
@@ -186,6 +185,15 @@ function stop_309() {
 	passthru("kill $node309_pid", $ret);
 	echo $ret === 0 ? "Done.\n" : "Failed. Error: $ret\n";
 	file_put_contents("node309_pid", '', LOCK_EX);
+}
+
+function checkProcessExists($name) {
+	$exist = false;
+	exec("ps x | grep What | grep -v grep", $pids);
+	if (count($pids) > 0) {
+        $exists = true;
+    }
+    return $exists;
 }
 
 function node_head() {
